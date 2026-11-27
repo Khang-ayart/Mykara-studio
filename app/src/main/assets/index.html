@@ -28,7 +28,8 @@ button{cursor:pointer}
 .ph2{display:flex;align-items:center;padding:0 8px;height:30px;font-size:10px;letter-spacing:.08em;color:var(--mu);font-weight:700;border-bottom:1px solid var(--ln);background:#262626;flex:none}
 .ph2 span{flex:1}
 #lyrsBox{flex:1;min-height:60px;overflow:auto}
-#propBox{flex:none;max-height:48%;overflow:auto;border-top:1px solid var(--ln)}
+#propBox{flex:none;max-height:48%;display:flex;flex-direction:column;border-top:1px solid var(--ln)}
+#detail{overflow:auto;flex:1;min-height:0}
 .lyr{border-bottom:1px solid #353535;padding:2px 4px;cursor:pointer}
 .lyr.cur{background:#1F3E3B}
 .lt{display:flex;align-items:center;gap:4px;min-height:40px}
@@ -105,7 +106,7 @@ button{cursor:pointer}
 <div id="rot">Xoay ngang điện thoại để xưởng vẽ gọn và rộng hơn.</div>
 <div class="ph2"><span>LỚP</span><button class="b" id="addL" style="min-height:26px;padding:0 8px;font-size:12px">+ Thêm</button></div>
 <div id="lyrsBox"><div id="lyrs"></div></div>
-<div id="propBox"><div class="ph2"><span>THUỘC TÍNH HÀNH ĐỘNG</span></div><div id="detail"></div></div>
+<div id="propBox"><div class="ph2"><span>THUỘC TÍNH HÀNH ĐỘNG</span><button class="b" id="delA" style="display:none;min-height:26px;padding:0 8px;font-size:12px;color:#FF8A80">🗑 Xóa</button></div><div id="detail"></div></div>
 </div>
 <div id="time">
 <div id="tcon">
@@ -338,8 +339,14 @@ function stepper(label,val,onm,onp){
  var p=document.createElement('button');p.className='stp';p.textContent='+';p.setAttribute('aria-label','Tăng '+label);p.onclick=onp;
  r.append(s,m,v,p);return r;
 }
+function delAct(){
+ if(!selAct)return;
+ layers.forEach(function(l){var i=l.actions.indexOf(selAct);if(i>=0)l.actions.splice(i,1)});
+ selAct=null;renderTL();renderDetail();render();autosave();toast('Đã xóa hành động');
+}
+$('delA').onclick=delAct;
 function renderDetail(){
- var d=$('detail');d.innerHTML='';
+ var d=$('detail');d.innerHTML='';$('delA').style.display=selAct?'':'none';
  if(!selAct){d.innerHTML='<div class="hint">Chạm vào một khối màu trên thanh thời gian để chỉnh số giây. Hoặc bấm "+ Hành động" để thêm cho lớp đang chọn.</div>';return}
  var a=selAct,h=div('hint');h.style.cssText+='font-weight:700;color:#EDEDED';h.textContent=(cur?cur.name:'')+' · '+NAMES[a.type];d.appendChild(h);
  function tFor(){return(DRAG[a.type]&&a.type!=='jump')?a.start+a.dur:a.start+a.dur/2}
@@ -358,8 +365,6 @@ function renderDetail(){
   d.appendChild(pr);
  }
  var tx=HINT[a.type];if(tx){var hp=div('hint');hp.textContent=tx;d.appendChild(hp)}
- var x=btn('Xóa hành động này',function(){var i=cur.actions.indexOf(a);if(i>=0)cur.actions.splice(i,1);selAct=null;renderTL();renderDetail();render();autosave()});
- x.style.cssText='margin:4px 8px 8px;width:calc(100% - 16px)';d.appendChild(x);
 }
 $('addA').onclick=function(){openPop(this,'up',function(p){
  p.style.maxHeight=Math.max(160,innerHeight-80)+'px';p.style.overflowY='auto';p.style.width='250px';
