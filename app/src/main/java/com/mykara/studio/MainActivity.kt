@@ -2,6 +2,8 @@ package com.mykara.studio
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +15,8 @@ import android.view.WindowInsetsController
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -25,6 +29,7 @@ import androidx.webkit.WebViewAssetLoader
  */
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private var fileCb: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +45,36 @@ class MainActivity : Activity() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                 loader.shouldInterceptRequest(request.url)
         }
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams
+            ): Boolean {
+                fileCb?.onReceiveValue(null)
+                fileCb = callback
+                return try {
+                    startActivityForResult(params.createIntent(), 77)
+                    true
+                } catch (e: Exception) {
+                    fileCb = null
+                    false
+                }
+            }
+        }
         web.addJavascriptInterface(Bridge(), "AndroidBridge")
         WebView.setWebContentsDebuggingEnabled(true)
         setContentView(web)
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == 77) {
+            fileCb?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            fileCb = null
+        } else {
+            @Suppress("DEPRECATION")
+            super.onActivityResult(requestCode, resultCode, data)
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
