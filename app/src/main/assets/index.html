@@ -140,9 +140,10 @@ button{cursor:pointer}
 <script>
 (function(){
 var W=1280,H=720,TOTAL=8,MAXL=10,KEY='mk-studio-v2';
-var NAMES={move:'Di chuyển',grow:'Phóng to',shrink:'Thu nhỏ',rotate:'Xoay',fade:'Mờ dần',shake:'Rung',walk:'Đi',idle:'Đứng',jump:'Nhảy',run:'Chạy',laugh:'Cười',wave:'Vẫy tay',flap:'Vỗ cánh',swoop:'Sà xuống',preen:'Rỉa lông',pose:'Chuỗi tư thế'};
-var GROUPS=[['CHUNG',['move','grow','shrink','rotate','fade','shake']],['NGƯỜI',['walk','idle','jump','run','laugh','wave']],['CHIM',['flap','swoop','preen']],['TƯ THẾ',['pose']]];
-var DEF={move:{dur:3,dx:400,dy:0,str:2,pv:'cen'},grow:{dur:4,str:2,pv:'cen'},shrink:{dur:4,str:2,pv:'cen'},rotate:{dur:2,str:2,pv:'cen'},fade:{dur:2,str:2,pv:'cen'},shake:{dur:1,str:2,pv:'cen'},walk:{dur:4,dx:300,dy:0,str:2,pv:'bot'},idle:{dur:4,str:2,pv:'bot'},jump:{dur:1,dx:0,dy:0,str:3,pv:'bot'},run:{dur:3,dx:500,dy:0,str:2,pv:'bot'},laugh:{dur:2,str:2,pv:'cen'},wave:{dur:2,str:3,pv:'bot'},flap:{dur:2,str:3,pv:'bot'},swoop:{dur:2,dx:600,dy:250,str:2,pv:'cen'},preen:{dur:3,str:2,pv:'bot'},pose:{dur:2,str:2,pv:'cen',hold:.3,blend:0,loop:1}};
+var NAMES={move:'Di chuyển',grow:'Phóng to',shrink:'Thu nhỏ',rotate:'Xoay',fade:'Mờ dần',shake:'Rung',walk:'Đi',idle:'Đứng',jump:'Nhảy',run:'Chạy',laugh:'Cười',wave:'Vẫy tay',flap:'Vỗ cánh',swoop:'Sà xuống',preen:'Rỉa lông',pose:'Chuỗi tư thế',bob:'Nhún',sway:'Đung đưa',pulse:'Nhấp nhô',squeeze:'Co bóp',nod:'Gật'};
+var GROUPS=[['CHUNG',['move','grow','shrink','rotate','fade','shake']],['NGƯỜI',['walk','idle','jump','run','laugh','wave']],['CHIM',['flap','swoop','preen']],['NHỊP',['bob','sway','pulse','squeeze','nod']],['TƯ THẾ',['pose']]];
+var DEF={move:{dur:3,dx:400,dy:0,str:2,pv:'cen'},grow:{dur:4,str:2,pv:'cen'},shrink:{dur:4,str:2,pv:'cen'},rotate:{dur:2,str:2,pv:'cen'},fade:{dur:2,str:2,pv:'cen'},shake:{dur:1,str:2,pv:'cen'},walk:{dur:4,dx:300,dy:0,str:2,pv:'bot'},idle:{dur:4,str:2,pv:'bot'},jump:{dur:1,dx:0,dy:0,str:3,pv:'bot'},run:{dur:3,dx:500,dy:0,str:2,pv:'bot'},laugh:{dur:2,str:2,pv:'cen'},wave:{dur:2,str:3,pv:'bot'},flap:{dur:2,str:3,pv:'bot'},swoop:{dur:2,dx:600,dy:250,str:2,pv:'cen'},preen:{dur:3,str:2,pv:'bot'},pose:{dur:2,str:2,pv:'cen',hold:.3,blend:0,loop:1},bob:{dur:3,str:2,pv:'bot',spd:1},sway:{dur:3,str:2,pv:'bot',spd:1},pulse:{dur:3,dx:1,dy:0,str:2,pv:'cen',spd:1},squeeze:{dur:3,str:2,pv:'cen',spd:1},nod:{dur:2,str:2,pv:'bot',spd:1}};
+var PER={walk:1,run:1,idle:1,laugh:1,wave:1,flap:1,bob:1,sway:1,pulse:1,squeeze:1,nod:1};
 var DRAG={move:1,walk:1,run:1,jump:1,swoop:1};
 var NOSTR={move:1,fade:1,swoop:1,pose:1};
 var NOPV={move:1,fade:1,shake:1,swoop:1,pose:1};
@@ -160,6 +161,7 @@ var HINT={
  preen:'Vẽ đầu chim thành lớp riêng, điểm xoay ở cổ. Chỉ có 1 hình thì cả hình cúi nhẹ.',
  grow:'',shrink:'',rotate:'',fade:'',shake:''
 };
+HINT.bob='Nhún lên xuống theo nhịp. Chỉnh Nhịp (nhanh chậm) và Mạnh nhẹ.';HINT.sway='Đung đưa qua lại nhẹ nhàng theo nhịp.';HINT.pulse='Chuyển động qua lại theo một hướng, có nhịp. Bấm Hướng để đổi ngang, dọc, chéo.';HINT.squeeze='Co lại rồi nở ra theo nhịp, như nắm mở hoặc bóp nhẹ.';HINT.nod='Gật xuống rồi ngẩng lên theo nhịp.';
 HINT.pose='Chạy lần lượt qua các tư thế của lớp này, mỗi tư thế giữ vài phần mười giây rồi lặp lại. Làm tư thế: bấm "+ Thêm" dưới giấy, rồi dùng công cụ Chỉnh để xoay tay, chân, cánh.';
 var COLORS=['#2B2B2B','#FFFFFF','#E4572E','#F5A623','#F5C542','#4CAF50','#2F80ED','#8E5BD6','#8B5E3C','#FF8FB1'];
 var $=function(i){return document.getElementById(i)};
@@ -347,7 +349,7 @@ function bbox(l){
 }
 function pivot(b,k){var x=b.x+b.w/2,y=b.y+b.h/2;if(k==='bot')y=b.y+b.h;else if(k==='top')y=b.y;else if(k==='lef')x=b.x;else if(k==='rig')x=b.x+b.w;return{x:x,y:y}}
 function acts(a,tt){
- var p=clamp((tt-a.start)/a.dur,0,1),e=ease(p),o={tx:0,ty:0,rot:0,sx:1,sy:1,al:1},D=Math.PI/180,n,ph,v,k,q;
+ var p=clamp((tt-a.start)/a.dur,0,1),e=ease(p),o={tx:0,ty:0,rot:0,sx:1,sy:1,al:1},D=Math.PI/180,n,ph,v,k,q,S=a.spd||1,w=2*Math.PI*1.5*S*(tt-a.start),env=(tt>=a.start&&tt<=a.start+a.dur)?Math.min(1,4*Math.min(p,1-p)):0;
  switch(a.type){
   case 'move':o.tx=a.dx*e;o.ty=a.dy*e;break;
   case 'grow':o.sx=o.sy=1+.25*a.str*e;break;
@@ -356,18 +358,23 @@ function acts(a,tt){
   case 'fade':o.al=1-e;break;
   case 'shake':if(tt>=a.start&&tt<=a.start+a.dur){k=a.str*5*Math.sin(Math.PI*p);o.tx=Math.sin(tt*53)*k;o.ty=Math.cos(tt*61)*k*.6}break;
   case 'walk':case 'run':
-   n=Math.max(1,Math.round(a.dur*(a.type==='run'?3.2:2)));ph=Math.PI*n*p;
+   n=Math.max(1,Math.round(a.dur*(a.type==='run'?3.2:2)*S));ph=Math.PI*n*p;
    o.tx=a.dx*p;o.ty=a.dy*p-(a.type==='run'?10+6*a.str:6+4*a.str)*Math.abs(Math.sin(ph));
    o.rot=Math.sin(ph)*(1+.5*a.str)*D+(a.type==='run'?(a.dx<0?-1:1)*.1*Math.sin(Math.PI*p):0);break;
   case 'jump':
    o.tx=a.dx*p;o.ty=-50*a.str*4*p*(1-p);
    q=0;if(tt>=a.start&&p<.12)q=Math.sin(Math.PI*p/.12);else if(tt>=a.start+a.dur&&tt<a.start+a.dur+.2)q=Math.sin(Math.PI*(tt-a.start-a.dur)/.2);
    o.sy=1-.15*q;o.sx=1+.1*q;break;
-  case 'idle':n=Math.max(1,Math.round(a.dur/1.6));v=Math.sin(2*Math.PI*n*p);o.sy=1+.012*a.str*v;o.sx=1-.006*a.str*v;break;
-  case 'laugh':n=Math.max(1,Math.round(a.dur*3));v=Math.abs(Math.sin(Math.PI*n*p));o.ty=-6*a.str*v;o.sy=1+.02*a.str*v;break;
-  case 'wave':n=Math.max(1,Math.round(a.dur*1.5));o.rot=Math.sin(2*Math.PI*n*p)*(10+6*a.str)*D;break;
-  case 'flap':n=Math.max(1,Math.round(a.dur*3));v=Math.sin(2*Math.PI*n*p);o.rot=v*(10+8*a.str)*D;o.ty=4*a.str*v;break;
+  case 'idle':n=Math.max(1,Math.round(a.dur/1.6*S));v=Math.sin(2*Math.PI*n*p);o.sy=1+.012*a.str*v;o.sx=1-.006*a.str*v;break;
+  case 'laugh':n=Math.max(1,Math.round(a.dur*3*S));v=Math.abs(Math.sin(Math.PI*n*p));o.ty=-6*a.str*v;o.sy=1+.02*a.str*v;break;
+  case 'wave':n=Math.max(1,Math.round(a.dur*1.5*S));o.rot=Math.sin(2*Math.PI*n*p)*(10+6*a.str)*D;break;
+  case 'flap':n=Math.max(1,Math.round(a.dur*3*S));v=Math.sin(2*Math.PI*n*p);o.rot=v*(10+8*a.str)*D;o.ty=4*a.str*v;break;
   case 'swoop':o.tx=a.dx*p;o.ty=a.dy*(1-Math.pow(1-p,2));o.rot=(a.dx<0?-1:1)*Math.atan2(a.dy*2*(1-p),Math.abs(a.dx)||1)*.6;break;
+  case 'bob':o.ty=-8*a.str*Math.abs(Math.sin(w/2))*env;break;
+  case 'sway':o.rot=Math.sin(w/2)*(3+2*a.str)*D*env;o.tx=Math.sin(w/2)*3*a.str*env;break;
+  case 'pulse':k=Math.hypot(a.dx,a.dy)||1;q=7*a.str*Math.sin(w)*env;o.tx=a.dx/k*q;o.ty=a.dy/k*q;break;
+  case 'squeeze':v=(1-Math.cos(w))/2*env;o.sx=1-.08*a.str*v;o.sy=1+.03*a.str*v;break;
+  case 'nod':o.rot=Math.sin(w/2)*(4+2*a.str)*D*env;break;
   case 'preen':n=3;o.rot=Math.sin(2*Math.PI*n*p)*(5+4*a.str)*D*Math.sin(Math.PI*p);o.ty=2*a.str*Math.abs(Math.sin(Math.PI*n*p));break;
  }
  return o;
@@ -673,6 +680,14 @@ function renderDetail(){
  function ch(f){f();a.start=Math.round(clamp(a.start,0,TOTAL-.5)*2)/2;a.dur=Math.round(clamp(a.dur,.5,TOTAL-a.start)*2)/2;t=tFor();renderTL();renderDetail();render();autosave()}
  d.appendChild(stepper('Bắt đầu',fmt(a.start)+' s',function(){ch(function(){a.start-=.5})},function(){ch(function(){a.start+=.5})}));
  d.appendChild(stepper('Kéo dài',fmt(a.dur)+' s',function(){ch(function(){a.dur-=.5})},function(){ch(function(){a.dur+=.5})}));
+
+ if(PER[a.type]){
+  d.appendChild(stepper('Nhịp',fmt(a.spd||1)+' ×',function(){a.spd=Math.max(.25,Math.round(((a.spd||1)-.25)*100)/100);t=tFor();renderDetail();render();autosave()},function(){a.spd=Math.min(4,Math.round(((a.spd||1)+.25)*100)/100);t=tFor();renderDetail();render();autosave()}));
+ }
+ if(a.type==='pulse'){
+  var DR=[[1,0,'Ngang ↔'],[0,1,'Dọc ↕'],[1,-1,'Chéo ↗'],[1,1,'Chéo ↘']],di=0;DR.forEach(function(x,i){if(Math.sign(x[0])===Math.sign(a.dx)&&Math.sign(x[1])===Math.sign(a.dy))di=i});
+  var hr=div('prow');hr.appendChild(btn('Hướng: '+DR[di][2],function(){var nx=DR[(di+1)%4];a.dx=nx[0];a.dy=nx[1];t=tFor();renderDetail();render();autosave()}));d.appendChild(hr);
+ }
  if(a.type==='pose'){
   d.appendChild(stepper('Mỗi hình giữ',fmt(a.hold||.3)+' s',function(){a.hold=Math.max(.1,Math.round(((a.hold||.3)-.1)*10)/10);t=tFor();renderDetail();render();autosave()},function(){a.hold=Math.min(2,Math.round(((a.hold||.3)+.1)*10)/10);t=tFor();renderDetail();render();autosave()}));
   var lp=div('prow');lp.appendChild(btn(a.loop===0?'Chạy 1 lần, giữ hình cuối':'Lặp lại liên tục',function(){a.loop=a.loop===0?1:0;t=tFor();renderDetail();render();autosave()}));d.appendChild(lp);
@@ -791,8 +806,20 @@ $('menuB').onclick=function(){openPop(this,'down',function(p){
 })};
 /* ---------- gõ lệnh tiếng Việt (gợi ý tự động, không phải AI) ---------- */
 function vnNorm(x){return x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}
+var USERD=[],DICTKEY='mk-studio-dict';
+function dictParse(text){
+ var out=[],bad=[];
+ text.split(/\n/).forEach(function(ln){
+  if(!ln.trim())return;var i=ln.indexOf('=');if(i<0){bad.push(ln.trim());return}
+  var w=vnNorm(ln.slice(0,i)),r=vnNorm(ln.slice(i+1)),ty=null,k;
+  for(k in NAMES){if(vnNorm(NAMES[k])===r||k===r)ty=k}
+  if(w&&ty)out.push({w:w,type:ty});else bad.push(ln.trim());
+ });
+ return{list:out,bad:bad};
+}
+try{USERD=dictParse(localStorage.getItem(DICTKEY)||'').list}catch(e){USERD=[]}
 var NUMW={mot:1,hai:2,ba:3,bon:4,nam:5,sau:6,bay:7,tam:8};
-var VERBS=[[/di chuyen|truot|\blui\b/,'move'],[/sa xuong|lao xuong/,'swoop'],[/ria long/,'preen'],[/vo canh|dap canh|\bbay\b/,'flap'],[/\bvay\b|chao/,'wave'],[/\bcuoi\b|\bvui\b/,'laugh'],[/\bnhay\b/,'jump'],[/\bchay\b/,'run'],[/di bo|\bbuoc\b|\bdi\b|\bdao\b/,'walk'],[/xoay|quay/,'rotate'],[/phong to|to len|lon len|to dan/,'grow'],[/thu nho|nho lai|nho dan/,'shrink'],[/mo dan|bien mat|mo di|tan bien/,'fade'],[/\brung\b|run ray|\blac\b/,'shake'],[/dung yen|\bnghi\b|dung lai|\bcho\b|\bdoi\b/,'idle']];
+var VERBS=[[/nhap nho|\bnhip\b/,'pulse'],[/co bop|nam mo|\bbop\b/,'squeeze'],[/gat dau|\bgat\b/,'nod'],[/\bnhun\b/,'bob'],[/dung dua|lac dau|lac lu/,'sway'],[/di chuyen|truot|\blui\b/,'move'],[/sa xuong|lao xuong/,'swoop'],[/ria long/,'preen'],[/vo canh|dap canh|\bbay\b/,'flap'],[/\bvay\b|chao/,'wave'],[/\bcuoi\b|\bvui\b/,'laugh'],[/\bnhay\b/,'jump'],[/\bchay\b/,'run'],[/di bo|\bbuoc\b|\bdi\b|\bdao\b/,'walk'],[/xoay|quay/,'rotate'],[/phong to|to len|lon len|to dan/,'grow'],[/thu nho|nho lai|nho dan/,'shrink'],[/mo dan|bien mat|mo di|tan bien/,'fade'],[/\brung\b|run ray|\blac\b/,'shake'],[/dung yen|\bnghi\b|dung lai|\bcho\b|\bdoi\b/,'idle']];
 function cmdParse(text){
  var src=vnNorm(text).replace(/(tay|chan|mat|tai|canh)\s+(phai|trai)/g,'$1');
  var out={acts:[],unknown:[],warn:''};if(!src)return out;
@@ -802,16 +829,18 @@ function cmdParse(text){
   if(cursor>=TOTAL-.4){out.warn='Dài quá '+TOTAL+' giây nên mình bỏ phần cuối';return}
   var cd=cmdDur(cl),parts=cl.split(/\s*(?:\bva\b|\bvua\b|\bdong thoi\b|\bcung luc\b|\bkem\b)\s*/).filter(function(c){return c}),gEnd=cursor,made=0;
   parts.forEach(function(pt){
-   var type=null;for(var i=0;i<VERBS.length;i++){if(VERBS[i][0].test(pt)){type=VERBS[i][1];break}}
+   var type=null,i;for(i=0;i<USERD.length;i++){if(pt.indexOf(USERD[i].w)>=0){type=USERD[i].type;break}}
+   if(!type)for(i=0;i<VERBS.length;i++){if(VERBS[i][0].test(pt)){type=VERBS[i][1];break}}
    var dir=cmdDir(pt);
    if(!type&&dir)type='move';
    if(!type){out.unknown.push(pt);return}
    var df=DEF[type],du=cmdDur(pt)||cd||df.dur;
-   if(!cmdDur(pt)&&!cd){if(/\bnhanh\b/.test(pt))du=df.dur*.6;else if(/\bcham\b/.test(pt))du=df.dur*1.6}
+   if(!cmdDur(pt)&&!cd&&!PER[type]){if(/\bnhanh\b/.test(pt))du=df.dur*.6;else if(/\bcham\b/.test(pt))du=df.dur*1.6}
    du=Math.max(.5,Math.round(du*2)/2);if(cursor+du>TOTAL)du=Math.max(.5,Math.round((TOTAL-cursor)*2)/2);
    var mag=/\bxa\b/.test(pt)?700:/mot chut|\bgan\b/.test(pt)?150:Math.abs(df.dx)||350,dx=df.dx||0,dy=df.dy||0;
    if(dir&&(DRAG[type])){dx=dir.x*mag;dy=dir.y*mag*.6}
-   var mk1=function(ty,ddx,ddy){var d2=DEF[ty];return{type:ty,start:cursor,dur:du,str:d2.str,dx:ddx,dy:ddy,pv:d2.pv}};
+   var sp=d0spd(pt,type,du),stc=/\bmanh\b/.test(pt)?3:/\bnhe\b/.test(pt)?1:0;
+   var mk1=function(ty,ddx,ddy){var d2=DEF[ty];return{type:ty,start:cursor,dur:du,str:stc||d2.str,dx:ddx,dy:ddy,pv:d2.pv,spd:PER[ty]?sp:undefined}};
    out.acts.push(mk1(type,dx,dy));made++;
    if(type==='flap'&&dir)out.acts.push(mk1('move',dir.x*mag,dir.y*mag*.6));
    gEnd=Math.max(gEnd,cursor+du);
@@ -819,6 +848,11 @@ function cmdParse(text){
   if(made)cursor=gEnd;
  });
  return out;
+}
+function d0spd(pt,type,du){
+ if(!PER[type])return undefined;
+ var m=pt.match(/(\d+)\s*(?:lan|nhip)/);if(m)return Math.max(.25,Math.min(4,Math.round(parseInt(m[1],10)/(du*1.5)*4)/4));
+ if(/\bnhanh\b/.test(pt))return 1.75;if(/\bcham\b/.test(pt))return .5;return 1;
 }
 function cmdDur(x){
  var m=x.match(/(\d+(?:[.,]\d+)?)\s*(?:giay|s\b)/);if(m)return parseFloat(m[1].replace(',','.'));
@@ -833,16 +867,28 @@ function cmdDir(x){
  if(/\bxuong\b/.test(x)&&!/sa xuong|lao xuong/.test(x))return{x:0,y:1};
  return null;
 }
-function cmdSig(a){return JSON.stringify([a.type,a.start,a.dur,a.str,a.dx,a.dy,a.pv,a.hold,a.blend,a.loop])}
+function cmdSig(a){return JSON.stringify([a.type,a.start,a.dur,a.str,a.dx,a.dy,a.pv,a.hold,a.blend,a.loop,a.spd])}
 function cmdApply(res){
  if(!cur||!res.acts.length)return 0;
  cur.actions=cur.actions.filter(function(a){return !(a.auto&&a.autoSig===cmdSig(a))});
  var first=null;
  res.acts.forEach(function(o){
-  var df=DEF[o.type],a={id:aid++,type:o.type,start:o.start,dur:o.dur,str:o.str,dx:o.dx,dy:o.dy,pv:o.pv,hold:df.hold,blend:df.blend,loop:df.loop,auto:true};
+  var df=DEF[o.type],a={id:aid++,type:o.type,start:o.start,dur:o.dur,str:o.str,dx:o.dx,dy:o.dy,pv:o.pv,hold:df.hold,blend:df.blend,loop:df.loop,spd:o.spd,auto:true};
   a.autoSig=cmdSig(a);cur.actions.push(a);if(!first)first=a;
  });
  selectAct(cur,first);autosave();return res.acts.length;
+}
+function dictPop(){
+ openPop($('cmdB'),'down',function(p){
+  p.style.maxHeight=(innerHeight-12)+'px';p.style.overflowY='auto';p.style.width='min(320px,'+(innerWidth-12)+'px)';
+  var h=div('');h.style.cssText='font-size:11px;color:#A8A8A8;padding:2px 4px 6px';
+  h.textContent='Mỗi dòng: từ của bạn = tên hành động. Ví dụ: nhấp hông = Nhấp nhô. Từ này chỉ lưu trên máy bạn. Tên hành động: '+Object.keys(NAMES).map(function(k){return NAMES[k]}).join(', ')+'.';p.appendChild(h);
+  var ta=document.createElement('textarea');ta.rows=6;ta.style.cssText='width:100%;box-sizing:border-box;background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px;font-size:14px;resize:vertical';ta.setAttribute('aria-label','Từ điển của tôi');
+  try{ta.value=localStorage.getItem(DICTKEY)||''}catch(e){}p.appendChild(ta);
+  var msg=div('');msg.style.cssText='font-size:12px;color:#F5A623;margin:4px 0';p.appendChild(msg);
+  p.appendChild(btn('Lưu từ điển',function(){var r=dictParse(ta.value);USERD=r.list;try{localStorage.setItem(DICTKEY,ta.value)}catch(e){}
+   if(r.bad.length){msg.textContent='Dòng chưa hiểu: '+r.bad.join(' | ')}else{closePop();toast('Đã lưu '+USERD.length+' từ')}},'pri'));
+ });
 }
 $('cmdB').onclick=function(){
  if(!cur)return;
@@ -858,7 +904,7 @@ $('cmdB').onclick=function(){
    if(!ta.value.trim())return;
    if(cur_res.acts.length){var t3=div('');t3.textContent='Mình hiểu là:';t3.style.cssText='color:#A8A8A8;margin-bottom:2px';res.appendChild(t3);
     cur_res.acts.forEach(function(o){var l2=div('');l2.textContent=fmt(o.start)+' – '+fmt(o.start+o.dur)+' s · '+NAMES[o.type]+(DRAG[o.type]&&(o.dx||o.dy)?(o.dx>0?' → phải':o.dx<0?' ← trái':'')+(o.dy<0?' ↑':o.dy>0?' ↓':''):'');res.appendChild(l2)})}
-   if(cur_res.unknown.length){var u=div('');u.style.cssText='color:#F5A623;margin-top:4px';u.textContent='Chưa hiểu: «'+cur_res.unknown.join('», «')+'». Thử các từ: đi, chạy, nhảy, cười, vẫy tay, vỗ cánh, sà xuống, xoay, phóng to, thu nhỏ, mờ dần, rung.';res.appendChild(u)}
+   if(cur_res.unknown.length){var u=div('');u.style.cssText='color:#F5A623;margin-top:4px';u.textContent='Chưa hiểu: «'+cur_res.unknown.join('», «')+'». Thử các từ: đi, chạy, nhảy, cười, vẫy tay, vỗ cánh, sà xuống, xoay, phóng to, thu nhỏ, mờ dần, rung, nhún, đung đưa, nhấp nhô, co bóp, gật. Hoặc thêm từ riêng ở «Từ của tôi».';res.appendChild(u)}
    if(cur_res.warn){var w2=div('');w2.style.cssText='color:#F5A623;margin-top:4px';w2.textContent=cur_res.warn;res.appendChild(w2)}
    go.style.display=cur_res.acts.length?'block':'none';
   }
@@ -866,6 +912,7 @@ $('cmdB').onclick=function(){
   p.style.maxHeight=(innerHeight-12)+'px';p.style.overflowY='auto';p.style.width='min(300px,'+(innerWidth-12)+'px)';
   function fit(){p.style.top=clamp(parseFloat(p.style.top)||6,6,Math.max(6,innerHeight-p.offsetHeight-6))+'px'}
   p.appendChild(btn('Hiểu',function(){show();fit()}));p.appendChild(res);p.appendChild(go);
+  var dg=btn('Từ của tôi ('+USERD.length+')',function(){closePop();dictPop()});dg.style.marginTop='6px';p.appendChild(dg);
   ta.oninput=function(){go.style.display='none'};
  });
 };
