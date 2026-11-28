@@ -163,7 +163,7 @@ HINT.pose='Chạy lần lượt qua các tư thế của lớp này, mỗi tư t
 var COLORS=['#2B2B2B','#FFFFFF','#E4572E','#F5A623','#F5C542','#4CAF50','#2F80ED','#8E5BD6','#8B5E3C','#FF8FB1'];
 var $=function(i){return document.getElementById(i)};
 var stage=$('stage'),sctx=stage.getContext('2d');
-var layers=[],cur=null,tool='pen',color=COLORS[0],size=10,undoS=[],redoS=[],t=0,onion=true,flt=null,selR=null,fdrag=null,importMode='layer',playing=false,raf=0,selAct=null,nid=1,aid=1,saveT=0,transOn=true,popEl=null;
+var adult=false,layers=[],cur=null,tool='pen',color=COLORS[0],size=10,undoS=[],redoS=[],t=0,onion=true,flt=null,selR=null,fdrag=null,importMode='layer',playing=false,raf=0,selAct=null,nid=1,aid=1,saveT=0,transOn=true,popEl=null;
 function div(c){var d=document.createElement('div');d.className=c||'';return d}
 function toast(m){var e=$('toast');e.textContent=m;e.className='on';clearTimeout(toast.h);toast.h=setTimeout(function(){e.className=''},2000)}
 function fmt(s){return s.toFixed(1).replace('.',',')}
@@ -731,12 +731,12 @@ $('expB').onclick=function(){commitFloat();openPop(this,'down',function(p){
  var img=document.createElement('img');img.alt='Ảnh PNG đã xuất';img.style.display='none';
  p.appendChild(btn('PNG cả bức',function(){exportPNG(false,img)},'pri'));
  p.appendChild(btn('PNG lớp đang chọn',function(){exportPNG(true,img)}));
- var n=div('');n.style.cssText='font-size:11px;color:#A8A8A8;margin-top:4px';n.textContent='Bản thử không tải file được. Ảnh hiện bên dưới, giữ ngón tay lên ảnh để lưu. Lưu .mkclip và MP4 có ở app thật.';p.appendChild(n);p.appendChild(img);
+ var n=div('');n.style.cssText='font-size:11px;color:#A8A8A8;margin-top:4px';n.textContent=(adult?'Dự án có nhãn 18+: chỉ lưu về máy để dùng cá nhân, không xuất sang Mykara. ':'')+'Bản thử không tải file được. Ảnh hiện bên dưới, giữ ngón tay lên ảnh để lưu. Lưu .mkclip và MP4 có ở app thật.';p.appendChild(n);p.appendChild(img);
 })};
 function save(silent){
  commitFloat();
  try{
-  var data={layers:layers.map(function(l){return{name:l.name,visible:l.visible,actions:l.actions,frames:l.frames.map(function(f){return f.c.toDataURL('image/png')}),fi:l.fi,par:layers.indexOf(l.par),rig:l.rig?{j:l.rig.j}:null,rps:l.frames.map(function(f){return f.rp||null})}}),cur:layers.indexOf(cur)};
+  var data={adult:adult,layers:layers.map(function(l){return{name:l.name,visible:l.visible,actions:l.actions,frames:l.frames.map(function(f){return f.c.toDataURL('image/png')}),fi:l.fi,par:layers.indexOf(l.par),rig:l.rig?{j:l.rig.j}:null,rps:l.frames.map(function(f){return f.rp||null})}}),cur:layers.indexOf(cur)};
   localStorage.setItem(KEY,JSON.stringify(data));if(!silent)toast('Đã lưu');
  }catch(e){if(!silent)toast('Trình duyệt không cho lưu ở đây')}
 }
@@ -752,6 +752,7 @@ function load(){
    setFi(l,clamp(s.fi||0,0,l.frames.length-1));
    if(s.rig)l.rig={j:s.rig.j,m:null};if(s.rps)s.rps.forEach(function(r,ii){if(l.frames[ii]&&r)l.frames[ii].rp=r});
   });
+  adult=!!d.adult;
   d.layers.forEach(function(sv,i){if(sv.par>=0&&sv.par!==i&&layers[sv.par])layers[i].par=layers[sv.par]});
   cur=layers[clamp(d.cur,0,layers.length-1)]||layers[0];return true;
  }catch(e){return false}
@@ -781,14 +782,36 @@ function demoPerson(){
 var rsAsk=0;
 $('menuB').onclick=function(){openPop(this,'down',function(p){
  p.appendChild(btn('Nạp ví dụ: chim',function(){closePop();demo()}));p.appendChild(btn('Nạp ví dụ: người',function(){closePop();demoPerson()}));
+ var ab=btn(adult?'Nhãn 18+: ĐANG BẬT (bấm để tắt)':'Nhãn 18+: tắt (bấm để bật)',function(){adult=!adult;closePop();adultChip();save(true);toast(adult?'Đã bật nhãn 18+. Dự án này không xuất sang Mykara':'Đã tắt nhãn 18+')});p.appendChild(ab);
  var r=btn('Bắt đầu lại',function(){
   if(!rsAsk){rsAsk=1;r.textContent='Bấm lần nữa để xóa hết';setTimeout(function(){rsAsk=0},3000);return}
   rsAsk=0;closePop();layers=[mk('Lớp 1')];cur=layers[0];undoS=[];redoS=[];selAct=null;t=0;renderLayers();renderTL();renderDetail();render();autosave();toast('Đã xóa, giấy mới');
  });p.appendChild(r);
 })};
+/* ---------- điều khoản & nhãn 18+ ---------- */
+var chip=document.createElement('span');chip.textContent='18+';chip.setAttribute('aria-label','Dự án có nhãn 18+');chip.style.cssText='display:none;background:#B3261E;color:#fff;font:700 12px system-ui;padding:3px 7px;border-radius:6px;margin-right:4px';
+$('expB').parentNode.insertBefore(chip,$('expB'));
+function adultChip(){chip.style.display=adult?'inline-block':'none'}
+function canExportMk(){return !adult}
+function showTerms(){
+ var o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:#000d;z-index:60;display:flex;align-items:center;justify-content:center;padding:12px';
+ var bx=document.createElement('div');bx.style.cssText='background:#2b2b2b;border:1px solid #555;border-radius:12px;padding:16px;max-width:520px;max-height:92vh;overflow:auto;color:#eee;font-size:14px;line-height:1.5';
+ bx.innerHTML='<div style="font-weight:700;font-size:16px;margin-bottom:8px">Trước khi dùng Mykara Studio</div>'
+ +'<ol style="padding-left:20px;margin:0 0 10px"><li>Studio là công cụ vẽ chạy ngay trên máy bạn. Studio không có AI và không tải nội dung của bạn lên mạng.</li>'
+ +'<li>Bạn tự chịu trách nhiệm về nội dung mình vẽ, nhập và xuất.</li>'
+ +'<li>Không dùng Studio cho nội dung tình dục có nhân vật là trẻ em hoặc trông như trẻ em.</li>'
+ +'<li>Nội dung dành cho người trên 18 tuổi: bật <b>Nhãn 18+</b> trong menu ⋯. Dự án có nhãn này không xuất sang Mykara, chỉ lưu về máy để dùng cá nhân.</li>'
+ +'<li>Khi đăng lên YouTube hay nơi khác, bạn cần theo quy định của nơi đó.</li></ol>';
+ var l=document.createElement('label');l.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:10px';
+ var ck=document.createElement('input');ck.type='checkbox';ck.style.cssText='width:22px;height:22px;accent-color:#4FB3AB';
+ l.append(ck,document.createTextNode('Mình đã đọc và đồng ý'));bx.appendChild(l);
+ var go=btn('Bắt đầu',function(){if(!ck.checked){toast('Bấm vào ô đồng ý trước nhé');return}try{localStorage.setItem('mk-studio-terms','1')}catch(e){}o.remove()},'pri');
+ bx.appendChild(go);o.appendChild(bx);document.body.appendChild(o);
+}
 /* ---------- khởi động ---------- */
 if(!load()){layers=[mk('Lớp 1')];cur=layers[0]}
-renderLayers();renderTL();renderDetail();render();
+renderLayers();renderTL();renderDetail();render();adultChip();
+try{if(!localStorage.getItem('mk-studio-terms'))showTerms()}catch(e){showTerms()}
 })();
 </script>
 </body>
