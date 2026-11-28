@@ -720,7 +720,32 @@ $('addA').onclick=function(){openPop(this,'up',function(p){
   });b.style.cssText='display:inline-block;width:auto;margin:0;min-height:40px';row.appendChild(b)});
   p.appendChild(row);
  });
+ p.style.maxHeight=(innerHeight-12)+'px';p.style.overflowY='auto';
+ var mh=div('');mh.style.cssText='font-size:10px;letter-spacing:.08em;color:#A8A8A8;font-weight:700;padding:8px 4px 2px';mh.textContent='ĐỘNG TÁC CỦA TÔI';p.appendChild(mh);
+ var mrow=div('');mrow.style.cssText='display:flex;flex-wrap:wrap;gap:4px';
+ MOVES.forEach(function(m){var b=btn(m.name,function(){closePop();var n=applyMove(m,cur,null);renderLayers();renderTL();renderDetail();render();autosave();toast('Đã thêm động tác «'+m.name+'» ('+n+' hành động)')});b.style.cssText='display:inline-block;width:auto;margin:0;min-height:40px';mrow.appendChild(b)});
+ if(!MOVES.length){var e0=div('');e0.style.cssText='font-size:12px;color:#A8A8A8;padding:2px 4px';e0.textContent='Chưa có. Làm xong hành động cho một lớp rồi lưu ở dưới.';mrow.appendChild(e0)}
+ p.appendChild(mrow);
+ var ni=document.createElement('input');ni.type='text';ni.placeholder='Tên động tác (vd: vẫy chào)';ni.setAttribute('aria-label','Tên động tác');ni.style.cssText='width:100%;box-sizing:border-box;margin-top:6px;background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px;font-size:14px';p.appendChild(ni);
+ p.appendChild(btn('💾 Lưu hành động của lớp này',function(){
+  var nm=ni.value.trim();if(!nm){toast('Đặt tên cho động tác trước nhé');return}
+  if(!cur||!cur.actions.length){toast('Lớp này chưa có hành động nào để lưu');return}
+  var mn=1e9;cur.actions.forEach(function(a){mn=Math.min(mn,a.start)});
+  var acts=cur.actions.map(function(a){var o=Object.assign({},a);delete o.id;delete o.auto;delete o.autoSig;o.start=Math.round((a.start-mn)*100)/100;return o});
+  var rps=cur.rig?cur.frames.map(function(f){return Object.assign(zeroRp(),f.rp||{})}):null;
+  MOVES=MOVES.filter(function(m){return m.name!==nm});MOVES.push({name:nm,actions:acts,rps:rps});saveMoves();closePop();toast('Đã lưu «'+nm+'». Dùng lại ở nhóm ĐỘNG TÁC CỦA TÔI hoặc gõ tên trong ✎ Gõ lệnh')}));
+ p.appendChild(btn('Quản lý / chép / dán',function(){closePop();movesPop()}));
 })};
+function movesPop(){
+ openPop($('addA'),'down',function(p){
+  p.style.maxHeight=(innerHeight-12)+'px';p.style.overflowY='auto';p.style.width='min(320px,'+(innerWidth-12)+'px)';
+  var h=div('');h.style.cssText='font-size:11px;color:#A8A8A8;padding:2px 4px 6px';h.textContent='Đây là toàn bộ động tác của bạn dưới dạng chữ. Chép để gửi cho người khác, hoặc dán của người khác rồi bấm Nhập. Động tác có tư thế khớp chỉ dùng được cho lớp đã gắn khớp.';p.appendChild(h);
+  var ta=document.createElement('textarea');ta.rows=6;ta.value=JSON.stringify(MOVES);ta.style.cssText='width:100%;box-sizing:border-box;background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px;font-size:12px;resize:vertical';ta.setAttribute('aria-label','Động tác của tôi');p.appendChild(ta);
+  var msg=div('');msg.style.cssText='font-size:12px;color:#F5A623;margin:4px 0';p.appendChild(msg);
+  p.appendChild(btn('Nhập (gộp vào danh sách)',function(){try{var arr=JSON.parse(ta.value);if(!Array.isArray(arr))throw 0;var n=0;arr.forEach(function(m){if(m&&m.name&&Array.isArray(m.actions)){MOVES=MOVES.filter(function(x){return x.name!==m.name});MOVES.push(m);n++}});saveMoves();closePop();toast('Đã nhập '+n+' động tác')}catch(e){msg.textContent='Chữ dán vào chưa đúng dạng'}},'pri'));
+  MOVES.forEach(function(m){var d=btn('Xóa «'+m.name+'»',function(){if(d.getAttribute('data-ask')!=='1'){d.setAttribute('data-ask','1');d.textContent='Bấm lần nữa để xóa «'+m.name+'»';return}MOVES=MOVES.filter(function(x){return x!==m});saveMoves();closePop();toast('Đã xóa')});p.appendChild(d)});
+ });
+}
 function stop(){playing=false;cancelAnimationFrame(raf);$('play').textContent='▶ Xem'}
 function play(){
  commitFloat();
@@ -820,6 +845,18 @@ function dictParse(text){
 try{USERD=dictParse(localStorage.getItem(DICTKEY)||'').list}catch(e){USERD=[]}
 var NUMW={mot:1,hai:2,ba:3,bon:4,nam:5,sau:6,bay:7,tam:8};
 var VERBS=[[/nhap nho|\bnhip\b/,'pulse'],[/co bop|nam mo|\bbop\b/,'squeeze'],[/gat dau|\bgat\b/,'nod'],[/\bnhun\b/,'bob'],[/dung dua|lac dau|lac lu/,'sway'],[/di chuyen|truot|\blui\b/,'move'],[/sa xuong|lao xuong/,'swoop'],[/ria long/,'preen'],[/vo canh|dap canh|\bbay\b/,'flap'],[/\bvay\b|chao/,'wave'],[/\bcuoi\b|\bvui\b/,'laugh'],[/\bnhay\b/,'jump'],[/\bchay\b/,'run'],[/di bo|\bbuoc\b|\bdi\b|\bdao\b/,'walk'],[/xoay|quay/,'rotate'],[/phong to|to len|lon len|to dan/,'grow'],[/thu nho|nho lai|nho dan/,'shrink'],[/mo dan|bien mat|mo di|tan bien/,'fade'],[/\brung\b|run ray|\blac\b/,'shake'],[/dung yen|\bnghi\b|dung lai|\bcho\b|\bdoi\b/,'idle']];
+var MOVEKEY='mk-studio-moves',MOVES=[];
+try{MOVES=JSON.parse(localStorage.getItem(MOVEKEY)||'[]')}catch(e){MOVES=[]}
+function saveMoves(){try{localStorage.setItem(MOVEKEY,JSON.stringify(MOVES))}catch(e){}}
+function moveDur(m){var e=.5;m.actions.forEach(function(a){e=Math.max(e,a.start+a.dur)});return e}
+function lyrByName(txt){
+ var res=[];
+ layers.forEach(function(l){var n=vnNorm(l.name);if(n.length<2)return;
+  var re=new RegExp('(^|[^a-z0-9])'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![a-z0-9])'),m=re.exec(txt);
+  if(m)res.push({l:l,i:m.index+m[1].length,n:n})});
+ res.sort(function(a,b){return a.i-b.i});return res;
+}
+function ctr(l){var b=bbox(l);return b?[b.x+b.w/2,b.y+b.h/2]:null}
 function cmdParse(text){
  var src=vnNorm(text).replace(/(tay|chan|mat|tai|canh)\s+(phai|trai)/g,'$1');
  var out={acts:[],unknown:[],warn:''};if(!src)return out;
@@ -827,27 +864,47 @@ function cmdParse(text){
  var cursor=0;
  clauses.forEach(function(cl){
   if(cursor>=TOTAL-.4){out.warn='Dài quá '+TOTAL+' giây nên mình bỏ phần cuối';return}
-  var cd=cmdDur(cl),parts=cl.split(/\s*(?:\bva\b|\bvua\b|\bdong thoi\b|\bcung luc\b|\bkem\b)\s*/).filter(function(c){return c}),gEnd=cursor,made=0;
-  parts.forEach(function(pt){
-   var type=null,i;for(i=0;i<USERD.length;i++){if(pt.indexOf(USERD[i].w)>=0){type=USERD[i].type;break}}
+  var cd=cmdDur(cl),parts=cl.split(/\s*(?:\bva\b|\bvua\b|\bdong thoi\b|\bcung luc\b|\bkem\b|\bcon\b)\s*/).filter(function(c){return c}),gEnd=cursor,made=0,lastS=null;
+  parts.forEach(function(pt0){
+   var names=lyrByName(pt0),rm=/\b(?:vao|ve phia|huong ve|lai gan|den gan|toi)\b/.exec(pt0),ri=rm?rm.index:-1,subj=null,targ=null;
+   names.forEach(function(q){if(ri>=0&&q.i>ri){if(!targ)targ=q.l}else if(!subj)subj=q.l});
+   if(!subj)subj=lastS||cur;lastS=subj;
+   var pt=pt0;names.forEach(function(q){pt=pt.replace(q.n,' ')});pt=pt.replace(/\s+/g,' ').trim();
+   if(targ===subj)targ=null;
+   var type=null,pm=null,i;
+   for(i=0;i<MOVES.length;i++){var mn=vnNorm(MOVES[i].name);if(mn&&pt0.indexOf(mn)>=0){pm=MOVES[i];break}}
+   if(pm){var pd=moveDur(pm);out.acts.push({preset:pm,type:'preset',start:cursor,dur:pd,lyr:subj});gEnd=Math.max(gEnd,cursor+pd);made++;return}
+   for(i=0;i<USERD.length;i++){if(pt.indexOf(USERD[i].w)>=0){type=USERD[i].type;break}}
    if(!type)for(i=0;i<VERBS.length;i++){if(VERBS[i][0].test(pt)){type=VERBS[i][1];break}}
    var dir=cmdDir(pt);
-   if(!type&&dir)type='move';
-   if(!type){out.unknown.push(pt);return}
+   if(!type&&(dir||targ))type='move';
+   if(!type){out.unknown.push(pt0);return}
    var df=DEF[type],du=cmdDur(pt)||cd||df.dur;
    if(!cmdDur(pt)&&!cd&&!PER[type]){if(/\bnhanh\b/.test(pt))du=df.dur*.6;else if(/\bcham\b/.test(pt))du=df.dur*1.6}
    du=Math.max(.5,Math.round(du*2)/2);if(cursor+du>TOTAL)du=Math.max(.5,Math.round((TOTAL-cursor)*2)/2);
    var mag=/\bxa\b/.test(pt)?700:/mot chut|\bgan\b/.test(pt)?150:Math.abs(df.dx)||350,dx=df.dx||0,dy=df.dy||0;
-   if(dir&&(DRAG[type])){dx=dir.x*mag;dy=dir.y*mag*.6}
+   var toward=null;
+   if(targ){var a1=ctr(subj),b1=ctr(targ);if(a1&&b1){var vx=b1[0]-a1[0],vy=b1[1]-a1[1],dd=Math.hypot(vx,vy)||1;toward={ux:vx/dd,uy:vy/dd,dist:dd}}}
+   if(toward){
+    if(type==='pulse'){dx=toward.ux;dy=toward.uy}
+    else if(DRAG[type]){var go=Math.round(toward.dist*.8);dx=Math.round(toward.ux*go);dy=Math.round(toward.uy*go)}
+   }else if(dir&&DRAG[type]){dx=dir.x*mag;dy=dir.y*mag*.6}
+   else if(dir&&type==='pulse'){dx=dir.x;dy=dir.y}
    var sp=d0spd(pt,type,du),stc=/\bmanh\b/.test(pt)?3:/\bnhe\b/.test(pt)?1:0;
-   var mk1=function(ty,ddx,ddy){var d2=DEF[ty];return{type:ty,start:cursor,dur:du,str:stc||d2.str,dx:ddx,dy:ddy,pv:d2.pv,spd:PER[ty]?sp:undefined}};
+   var mk1=function(ty,ddx,ddy){var d2=DEF[ty];return{type:ty,start:cursor,dur:du,str:stc||d2.str,dx:ddx,dy:ddy,pv:d2.pv,spd:PER[ty]?sp:undefined,lyr:subj,toward:targ?{name:targ.name}:null}};
    out.acts.push(mk1(type,dx,dy));made++;
-   if(type==='flap'&&dir)out.acts.push(mk1('move',dir.x*mag,dir.y*mag*.6));
+   if(type==='flap'&&(dir||toward))out.acts.push(mk1('move',toward?Math.round(toward.ux*toward.dist*.8):dir.x*mag,toward?Math.round(toward.uy*toward.dist*.8):dir.y*mag*.6));
    gEnd=Math.max(gEnd,cursor+du);
   });
   if(made)cursor=gEnd;
  });
  return out;
+}
+function cmdLabel(o){
+ var nm=o.type==='preset'?'Động tác «'+o.preset.name+'»':NAMES[o.type];
+ var pre=layers.length>1&&o.lyr?o.lyr.name+': ':'';
+ var ar=(o.type!=='preset'&&DRAG[o.type]&&(o.dx||o.dy))?(o.dx>0?' → phải':o.dx<0?' ← trái':'')+(o.dy<0?' ↑':o.dy>0?' ↓':''):'';
+ return fmt(o.start)+' – '+fmt(o.start+o.dur)+' s · '+pre+nm+(o.toward?' → hướng về '+o.toward.name:ar);
 }
 function d0spd(pt,type,du){
  if(!PER[type])return undefined;
@@ -868,15 +925,35 @@ function cmdDir(x){
  return null;
 }
 function cmdSig(a){return JSON.stringify([a.type,a.start,a.dur,a.str,a.dx,a.dy,a.pv,a.hold,a.blend,a.loop,a.spd])}
-function cmdApply(res){
- if(!cur||!res.acts.length)return 0;
- cur.actions=cur.actions.filter(function(a){return !(a.auto&&a.autoSig===cmdSig(a))});
- var first=null;
- res.acts.forEach(function(o){
-  var df=DEF[o.type],a={id:aid++,type:o.type,start:o.start,dur:o.dur,str:o.str,dx:o.dx,dy:o.dy,pv:o.pv,hold:df.hold,blend:df.blend,loop:df.loop,spd:o.spd,auto:true};
-  a.autoSig=cmdSig(a);cur.actions.push(a);if(!first)first=a;
+function applyMove(m,l,offset){
+ if(!l)return 0;
+ var base=offset!=null?offset:0,warn=false,n=0;
+ if(offset==null){l.actions.forEach(function(a){base=Math.max(base,a.start+a.dur)});if(base+moveDur(m)>TOTAL)base=Math.max(0,TOTAL-moveDur(m))}
+ if(m.rps&&l.rig){
+  while(l.frames.length<m.rps.length&&l.frames.length<8){var c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');x.drawImage(l.frames[0].c,0,0);l.frames.push({c:c,ctx:x,rp:zeroRp()})}
+  m.rps.forEach(function(r,i){if(i>=1&&l.frames[i])l.frames[i].rp=Object.assign(zeroRp(),r)});
+ }
+ m.actions.forEach(function(a){
+  if(a.type==='pose'&&!(m.rps&&l.rig)){warn=true;return}
+  if(base+a.start>=TOTAL)return;
+  var a2=Object.assign({},a,{id:aid++,start:base+a.start});a2.dur=Math.min(a2.dur,TOTAL-a2.start);delete a2.auto;delete a2.autoSig;l.actions.push(a2);n++;
  });
- selectAct(cur,first);autosave();return res.acts.length;
+ if(warn)toast('Động tác này có phần tư thế khớp, lớp này chưa gắn khớp nên mình bỏ phần đó');
+ return n;
+}
+function cmdApply(res){
+ if(!res.acts.length)return 0;
+ var touched=[];res.acts.forEach(function(o){if(o.lyr&&touched.indexOf(o.lyr)<0)touched.push(o.lyr)});
+ touched.forEach(function(l){l.actions=l.actions.filter(function(a){return !(a.auto&&a.autoSig===cmdSig(a))})});
+ var first=null,fl=null,cnt=0;
+ res.acts.forEach(function(o){
+  var l=o.lyr||cur;
+  if(o.type==='preset'){cnt+=applyMove(o.preset,l,o.start);return}
+  var df=DEF[o.type],a={id:aid++,type:o.type,start:o.start,dur:o.dur,str:o.str,dx:o.dx,dy:o.dy,pv:o.pv,hold:df.hold,blend:df.blend,loop:df.loop,spd:o.spd,auto:true};
+  a.autoSig=cmdSig(a);l.actions.push(a);cnt++;if(!first){first=a;fl=l}
+ });
+ if(first)selectAct(fl,first);else{renderTL();render()}
+ renderLayers();autosave();return cnt;
 }
 function dictPop(){
  openPop($('cmdB'),'down',function(p){
@@ -903,7 +980,7 @@ $('cmdB').onclick=function(){
    cur_res=cmdParse(ta.value);res.innerHTML='';
    if(!ta.value.trim())return;
    if(cur_res.acts.length){var t3=div('');t3.textContent='Mình hiểu là:';t3.style.cssText='color:#A8A8A8;margin-bottom:2px';res.appendChild(t3);
-    cur_res.acts.forEach(function(o){var l2=div('');l2.textContent=fmt(o.start)+' – '+fmt(o.start+o.dur)+' s · '+NAMES[o.type]+(DRAG[o.type]&&(o.dx||o.dy)?(o.dx>0?' → phải':o.dx<0?' ← trái':'')+(o.dy<0?' ↑':o.dy>0?' ↓':''):'');res.appendChild(l2)})}
+    cur_res.acts.forEach(function(o){var l2=div('');l2.textContent=cmdLabel(o);res.appendChild(l2)})}
    if(cur_res.unknown.length){var u=div('');u.style.cssText='color:#F5A623;margin-top:4px';u.textContent='Chưa hiểu: «'+cur_res.unknown.join('», «')+'». Thử các từ: đi, chạy, nhảy, cười, vẫy tay, vỗ cánh, sà xuống, xoay, phóng to, thu nhỏ, mờ dần, rung, nhún, đung đưa, nhấp nhô, co bóp, gật. Hoặc thêm từ riêng ở «Từ của tôi».';res.appendChild(u)}
    if(cur_res.warn){var w2=div('');w2.style.cssText='color:#F5A623;margin-top:4px';w2.textContent=cur_res.warn;res.appendChild(w2)}
    go.style.display=cur_res.acts.length?'block':'none';
