@@ -130,6 +130,7 @@ button{cursor:pointer}
 <button class="b pri" id="play" style="min-width:76px">▶ Xem</button>
 <input type="range" id="scrub" min="0" max="8" step="0.05" value="0" aria-label="Thời điểm">
 <span id="tlab">0,0 / 8,0 s</span>
+<button class="b" id="cmdB" data-pop="1">✎ Gõ lệnh</button>
 <button class="b" id="addA" data-pop="1">+ Hành động</button>
 </div>
 <div id="tlWrap"><div id="tl"></div></div>
@@ -788,6 +789,86 @@ $('menuB').onclick=function(){openPop(this,'down',function(p){
   rsAsk=0;closePop();layers=[mk('Lớp 1')];cur=layers[0];undoS=[];redoS=[];selAct=null;t=0;renderLayers();renderTL();renderDetail();render();autosave();toast('Đã xóa, giấy mới');
  });p.appendChild(r);
 })};
+/* ---------- gõ lệnh tiếng Việt (gợi ý tự động, không phải AI) ---------- */
+function vnNorm(x){return x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}
+var NUMW={mot:1,hai:2,ba:3,bon:4,nam:5,sau:6,bay:7,tam:8};
+var VERBS=[[/di chuyen|truot|\blui\b/,'move'],[/sa xuong|lao xuong/,'swoop'],[/ria long/,'preen'],[/vo canh|dap canh|\bbay\b/,'flap'],[/\bvay\b|chao/,'wave'],[/\bcuoi\b|\bvui\b/,'laugh'],[/\bnhay\b/,'jump'],[/\bchay\b/,'run'],[/di bo|\bbuoc\b|\bdi\b|\bdao\b/,'walk'],[/xoay|quay/,'rotate'],[/phong to|to len|lon len|to dan/,'grow'],[/thu nho|nho lai|nho dan/,'shrink'],[/mo dan|bien mat|mo di|tan bien/,'fade'],[/\brung\b|run ray|\blac\b/,'shake'],[/dung yen|\bnghi\b|dung lai|\bcho\b|\bdoi\b/,'idle']];
+function cmdParse(text){
+ var src=vnNorm(text).replace(/(tay|chan|mat|tai|canh)\s+(phai|trai)/g,'$1');
+ var out={acts:[],unknown:[],warn:''};if(!src)return out;
+ var clauses=src.split(/\s*(?:,|;|\.|\bsau do\b|\broi\b|\bxong\b|\btiep theo\b|\bsau cung\b|\bcuoi cung\b)\s*/).filter(function(c){return c});
+ var cursor=0;
+ clauses.forEach(function(cl){
+  if(cursor>=TOTAL-.4){out.warn='Dài quá '+TOTAL+' giây nên mình bỏ phần cuối';return}
+  var cd=cmdDur(cl),parts=cl.split(/\s*(?:\bva\b|\bvua\b|\bdong thoi\b|\bcung luc\b|\bkem\b)\s*/).filter(function(c){return c}),gEnd=cursor,made=0;
+  parts.forEach(function(pt){
+   var type=null;for(var i=0;i<VERBS.length;i++){if(VERBS[i][0].test(pt)){type=VERBS[i][1];break}}
+   var dir=cmdDir(pt);
+   if(!type&&dir)type='move';
+   if(!type){out.unknown.push(pt);return}
+   var df=DEF[type],du=cmdDur(pt)||cd||df.dur;
+   if(!cmdDur(pt)&&!cd){if(/\bnhanh\b/.test(pt))du=df.dur*.6;else if(/\bcham\b/.test(pt))du=df.dur*1.6}
+   du=Math.max(.5,Math.round(du*2)/2);if(cursor+du>TOTAL)du=Math.max(.5,Math.round((TOTAL-cursor)*2)/2);
+   var mag=/\bxa\b/.test(pt)?700:/mot chut|\bgan\b/.test(pt)?150:Math.abs(df.dx)||350,dx=df.dx||0,dy=df.dy||0;
+   if(dir&&(DRAG[type])){dx=dir.x*mag;dy=dir.y*mag*.6}
+   var mk1=function(ty,ddx,ddy){var d2=DEF[ty];return{type:ty,start:cursor,dur:du,str:d2.str,dx:ddx,dy:ddy,pv:d2.pv}};
+   out.acts.push(mk1(type,dx,dy));made++;
+   if(type==='flap'&&dir)out.acts.push(mk1('move',dir.x*mag,dir.y*mag*.6));
+   gEnd=Math.max(gEnd,cursor+du);
+  });
+  if(made)cursor=gEnd;
+ });
+ return out;
+}
+function cmdDur(x){
+ var m=x.match(/(\d+(?:[.,]\d+)?)\s*(?:giay|s\b)/);if(m)return parseFloat(m[1].replace(',','.'));
+ if(/nua giay/.test(x))return .5;
+ m=x.match(/\b(mot|hai|ba|bon|nam|sau|bay|tam)\s+giay/);if(m)return NUMW[m[1]];
+ return 0;
+}
+function cmdDir(x){
+ if(/trai\s+(?:sang|qua|den)\s+phai|(?:sang|qua|ve|den|huong)\s+phai|\bphai\b/.test(x)&&!/phai\s+(?:sang|qua|den)\s+trai/.test(x))return{x:1,y:0};
+ if(/phai\s+(?:sang|qua|den)\s+trai|(?:sang|qua|ve|den|huong)\s+trai|\btrai\b/.test(x))return{x:-1,y:0};
+ if(/\blen\b|len tren/.test(x)&&!/nhay len|to len|lon len/.test(x))return{x:0,y:-1};
+ if(/\bxuong\b/.test(x)&&!/sa xuong|lao xuong/.test(x))return{x:0,y:1};
+ return null;
+}
+function cmdSig(a){return JSON.stringify([a.type,a.start,a.dur,a.str,a.dx,a.dy,a.pv,a.hold,a.blend,a.loop])}
+function cmdApply(res){
+ if(!cur||!res.acts.length)return 0;
+ cur.actions=cur.actions.filter(function(a){return !(a.auto&&a.autoSig===cmdSig(a))});
+ var first=null;
+ res.acts.forEach(function(o){
+  var df=DEF[o.type],a={id:aid++,type:o.type,start:o.start,dur:o.dur,str:o.str,dx:o.dx,dy:o.dy,pv:o.pv,hold:df.hold,blend:df.blend,loop:df.loop,auto:true};
+  a.autoSig=cmdSig(a);cur.actions.push(a);if(!first)first=a;
+ });
+ selectAct(cur,first);autosave();return res.acts.length;
+}
+$('cmdB').onclick=function(){
+ if(!cur)return;
+ openPop(this,'down',function(p){
+  var h=div('');h.style.cssText='font-size:11px;color:#A8A8A8;padding:2px 4px 6px';h.textContent='Gõ việc cần làm cho lớp «'+cur.name+'». Mình dò từ khóa, không phải AI, nên nói ngắn và rõ.';p.appendChild(h);
+  var ta=document.createElement('textarea');ta.rows=3;ta.placeholder='Ví dụ: đi sang phải 3 giây rồi nhảy';ta.style.cssText='width:100%;box-sizing:border-box;background:#2a2a2a;color:#eee;border:1px solid #555;border-radius:8px;padding:8px;font-size:14px;resize:none';ta.setAttribute('aria-label','Lệnh tiếng Việt');p.appendChild(ta);
+  var ex=div('');ex.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin:6px 0';
+  ['vẫy tay 2 giây rồi đi sang phải','vừa chạy vừa cười','phóng to rồi mờ dần'].forEach(function(t2){var b=btn(t2,function(){ta.value=t2;show()});b.style.cssText='width:auto;margin:0;min-height:30px;font-size:11px;padding:0 8px';ex.appendChild(b)});p.appendChild(ex);
+  var res=div('');res.style.cssText='font-size:12px;margin:4px 0';var go=btn('Thêm vào dòng thời gian',function(){var n=cmdApply(cur_res);closePop();if(n)toast('Đã thêm '+n+' hành động (tự động, bạn sửa được)')},'pri');go.style.display='none';
+  var cur_res=null;
+  function show(){
+   cur_res=cmdParse(ta.value);res.innerHTML='';
+   if(!ta.value.trim())return;
+   if(cur_res.acts.length){var t3=div('');t3.textContent='Mình hiểu là:';t3.style.cssText='color:#A8A8A8;margin-bottom:2px';res.appendChild(t3);
+    cur_res.acts.forEach(function(o){var l2=div('');l2.textContent=fmt(o.start)+' – '+fmt(o.start+o.dur)+' s · '+NAMES[o.type]+(DRAG[o.type]&&(o.dx||o.dy)?(o.dx>0?' → phải':o.dx<0?' ← trái':'')+(o.dy<0?' ↑':o.dy>0?' ↓':''):'');res.appendChild(l2)})}
+   if(cur_res.unknown.length){var u=div('');u.style.cssText='color:#F5A623;margin-top:4px';u.textContent='Chưa hiểu: «'+cur_res.unknown.join('», «')+'». Thử các từ: đi, chạy, nhảy, cười, vẫy tay, vỗ cánh, sà xuống, xoay, phóng to, thu nhỏ, mờ dần, rung.';res.appendChild(u)}
+   if(cur_res.warn){var w2=div('');w2.style.cssText='color:#F5A623;margin-top:4px';w2.textContent=cur_res.warn;res.appendChild(w2)}
+   go.style.display=cur_res.acts.length?'block':'none';
+  }
+  setTimeout(function(){fit()},0);
+  p.style.maxHeight=(innerHeight-12)+'px';p.style.overflowY='auto';p.style.width='min(300px,'+(innerWidth-12)+'px)';
+  function fit(){p.style.top=clamp(parseFloat(p.style.top)||6,6,Math.max(6,innerHeight-p.offsetHeight-6))+'px'}
+  p.appendChild(btn('Hiểu',function(){show();fit()}));p.appendChild(res);p.appendChild(go);
+  ta.oninput=function(){go.style.display='none'};
+ });
+};
 /* ---------- điều khoản & nhãn 18+ ---------- */
 var chip=document.createElement('span');chip.textContent='18+';chip.setAttribute('aria-label','Dự án có nhãn 18+');chip.style.cssText='display:none;background:#B3261E;color:#fff;font:700 12px system-ui;padding:3px 7px;border-radius:6px;margin-right:4px';
 $('expB').parentNode.insertBefore(chip,$('expB'));
